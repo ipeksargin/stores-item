@@ -2,7 +2,8 @@ import sqlite3
 from flask_restful import Resource,reqparse
 from models.user import UserModel
 from werkzeug.security import safe_str_cmp
-from flask_jwt_extended import create_access_token,create_refresh_token
+from flask_jwt_extended import (create_access_token,create_refresh_token,
+jwt_refresh_token_required,get_jwt_identity)
 
 
 class UserRegister(Resource):
@@ -58,7 +59,7 @@ class UserLogin(Resource):
     help="This field cannot be empty.",
     required =True
     )
-    
+
     @classmethod
     def post(cls):
         data = cls.parser.parse_args() #request parse
@@ -73,4 +74,10 @@ class UserLogin(Resource):
             },200
         return {'message':'Invalid credentails'},401
 
-        
+
+class TokenRefresh(Resource):
+    @jwt_refresh_token_required
+    def post(self):
+        current_user = get_jwt_identity()
+        new_access_token = create_access_token(identity=current_user,fresh=False) #gives you new access token
+        return {'message':new_access_token},200

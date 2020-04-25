@@ -2,7 +2,7 @@ import os
 from flask import Flask
 from flask_restful import Api
 from flask_jwt_extended import JWTManager
-from resources.user import UserRegister, UserMethod, UserLogin
+from resources.user import UserRegister, UserMethod, UserLogin, TokenRefresh
 from resources.item import Item, ItemList
 from db import db
 from resources.store import Store, StoreList
@@ -28,13 +28,14 @@ def add_claims_to_jwt(identity):
         return {'is_admin':True}
     return {'is_admin':False}
 
-    
+
 api.add_resource(Item, '/item/<string:name>')
 api.add_resource(ItemList, '/items')
 api.add_resource(UserRegister, '/register')
 api.add_resource(UserLogin, '/login')
 api.add_resource(StoreList, '/stores')
 api.add_resource(Store, '/store/<string:name>')
+api.add_resource(TokenRefresh, '/refresh')
 
 
 if __name__=='__main__':
