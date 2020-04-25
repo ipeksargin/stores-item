@@ -28,8 +28,11 @@ class Store(Resource):
 
         return {'message':'store deleted'}
 
+    @classmethod
+    def find_all(cls):
+        return cls.query.all()
 
 class StoreList(Resource):
     def get(self):
-        return {'stores': [store.json() for store in StoreModel.query.all()]}
+        return {'stores': [store.json() for store in StoreModel.find_all()]}
 
