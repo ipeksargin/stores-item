@@ -10,6 +10,7 @@ class UserModel(db.Model):
     id = db.Column(db.Integer,primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable =False)
     password = db.Column(db.String(80),nullable =False)
+    activated = db.Column(db.Boolean, default=False)
 
     def __init__(self,username:str,password:str):
         self.username = username
