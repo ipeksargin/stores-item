@@ -6,18 +6,10 @@ class ItemModel(db.Model):
     __tablename__="items"
 
     id = db.Column(db.Integer,primary_key=True)
-    name = db.Column(db.String(80))
-    price = db.Column(db.Float(precision=2))
+    name = db.Column(db.String(80),nullable=False)
+    price = db.Column(db.Float(precision=2),nullable=False)
     store_id = db.Column(db.Integer, db.ForeignKey('stores.id')) #to connect items and store
     store = db.relationship('StoreModel') # relation
-
-    def __init__(self,name,price, store_id):
-        self.name = name
-        self.price = price
-        self.store_id = store_id
-
-    def json(self):
-        return { 'id': self.id,'name': self.name,'price':self.price,'store':self.store_id}
 
     @classmethod
     def find_by_name(cls,name):
@@ -35,5 +27,3 @@ class ItemModel(db.Model):
     @classmethod
     def find_all(cls):
         return cls.query.all()
-
-

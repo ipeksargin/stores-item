@@ -1,13 +1,13 @@
 import os
-from flask import Flask
+from flask import Flask,jsonify
 from flask_restful import Api
 from flask_jwt_extended import JWTManager
 from resources.user import UserRegister, UserMethod, UserLogin, TokenRefresh, UserLogout
-from resources.item import Item, ItemList
 from db import db
-from resources.store import Store, StoreList
 from blacklist import BLACKLIST
-
+from marshmallow import ma
+from resources.item import ItemList, Item
+from resources.store import StoreList, Store
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL','sqlite:///data.db')
@@ -60,17 +60,17 @@ def revoked_token_callback():
     return {'description':'The user dont have access',
             'error':'token_revoked'},401
 
-
-
-api.add_resource(Item, '/item/<string:name>')
-api.add_resource(ItemList, '/items')
+api.add_resource(StoreList, '/stores')
+api.add_resource(Store,'/store/<string:name>')
 api.add_resource(UserRegister, '/register')
 api.add_resource(UserLogin, '/login')
-api.add_resource(StoreList, '/stores')
-api.add_resource(Store, '/store/<string:name>')
+api.add_resource(UserMethod, '/user/<int:user_id>')
 api.add_resource(TokenRefresh, '/refresh')
 api.add_resource(UserLogout, '/logout')
+api.add_resource(ItemList,'/items')
+api.add_resource(ItemList,'/item/<string:name>')
 
 
 if __name__=='__main__':
-    app.run(port=4998, debug=True)
+    ma.init_app(app)
+    app.run(port=4999, debug=True)

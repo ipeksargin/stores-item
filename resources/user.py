@@ -1,46 +1,40 @@
 import sqlite3
-from flask_restful import Resource,reqparse
+from flask_restful import Resource,request
 from models.user import UserModel
 from werkzeug.security import safe_str_cmp
 from flask_jwt_extended import (create_access_token,create_refresh_token,
-jwt_refresh_token_required,get_jwt_identity)
+jwt_refresh_token_required,get_jwt_identity,jwt_required,get_raw_jwt)
+from blacklist import BLACKLIST
+from schemas.user import UserSchema
+from marshmallow import ValidationError
 
-
+user_schema = UserSchema()
 class UserRegister(Resource):
-    parser = reqparse.RequestParser()
-    parser.add_argument('username',
-    type=str,
-    help="This field cannot be empty.",
-    required =True
-    )
-    parser.add_argument('password',
-    type=str,
-    help="This field cannot be empty.",
-    required =True
-    )
+    @classmethod
+    def post(cls):
+        try:
+            get_json = request.get_json()
+            user = user_schema.load(get_json)
+        except ValidationError as err:
+                return err.messages, 400
 
-    def post(self):
-        data = UserRegister.parser.parse_args()
-
-        if UserModel.find_by_username(data['username']):
+        if UserModel.find_by_username(user.username):
             return {'message':'This username already exists'},404
 
-        user = UserModel(**data)
         user.save_to_db()
-
         return {'message':'User created'}, 201
 
 
 class UserMethod(Resource):
     @classmethod
-    def get_user(cls, user_id):
+    def get(cls, user_id):
         user = UserModel.find_by_id(user_id)
         if not user:
             return {'message':'User not found'},404
-        return user.json()
+        return user_schema.dump(user),200
 
     @classmethod
-    def delete_user(cls,user_id):
+    def delete(cls,user_id):
         user = UserModel.find_by_id(user_id)
         if not user:
             return {'message':'User not found'}
@@ -48,24 +42,16 @@ class UserMethod(Resource):
         return {'message':'User deleted'}
 
 class UserLogin(Resource):
-    parser = reqparse.RequestParser()
-    parser.add_argument('username',
-    type=str,
-    help="This field cannot be empty.",
-    required =True
-    )
-    parser.add_argument('password',
-    type=str,
-    help="This field cannot be empty.",
-    required =True
-    )
-
     @classmethod
     def post(cls):
-        data = cls.parser.parse_args() #request parse
-        user = UserModel.find_by_username(data['username'])
+        try:
+            get_json = request.get_json()
+            data = user_schema.load(get_json) #request parse
+        except ValidationError as err:
+            return err.messages,400
+        user = UserModel.find_by_username(data.username)
 
-        if user and safe_str_cmp(user.password, data['password']):
+        if user and safe_str_cmp(user.password, data.password):
             access_token = create_access_token(identity=user.id, fresh=True)
             refresh_token = create_refresh_token(user.id)
             return {
@@ -74,10 +60,17 @@ class UserLogin(Resource):
             },200
         return {'message':'Invalid credentails'},401
 
-
+class UserLogout(Resource):
+    @classmethod
+    @jwt_required
+    def post(cls):
+        jti = get_raw_jwt['jti'] #jti is uniques identifier for jwt.
+        BLACKLIST.add(jti)
+        return {'message': 'Logged out'},200
 class TokenRefresh(Resource):
+    @classmethod
     @jwt_refresh_token_required
-    def post(self):
+    def post(cls):
         current_user = get_jwt_identity()
         new_access_token = create_access_token(identity=current_user,fresh=False) #gives you new access token
         return {'message':new_access_token},200

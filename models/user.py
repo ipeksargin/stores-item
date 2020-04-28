@@ -1,15 +1,17 @@
 import sqlite3
 from db import db
+from typing import Dict,List
+
 
 
 class UserModel(db.Model):
     __tablename__="users"
     
     id = db.Column(db.Integer,primary_key=True)
-    username = db.Column(db.String(80))
-    password = db.Column(db.String(80))
+    username = db.Column(db.String(80), unique=True, nullable =False)
+    password = db.Column(db.String(80),nullable =False)
 
-    def __init__(self,username,password):
+    def __init__(self,username:str,password:str):
         self.username = username
         self.password = password
     
@@ -20,10 +22,7 @@ class UserModel(db.Model):
     def delete_from_db(self):
         db.session.remove(self)
         db.session.commit()
-
-    def json(self):
-        return { 'id': self.id,'username': self.username}
-
+        
     @classmethod
     def find_by_username(cls, username):
         return UserModel.query.filter_by(username=username).first()

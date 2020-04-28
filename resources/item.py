@@ -1,44 +1,37 @@
-from flask_restful import Resource, reqparse
+from flask_restful import Resource
+from flask import request
+from schemas.item import ItemSchema
 from flask_jwt_extended import jwt_required, get_jwt_claims, jwt_optional,get_jwt_identity
 import sqlite3
 from models.item import ItemModel
+from marshmallow import ValidationError
 
-
+item_schema = ItemSchema()
+item_list_schema = ItemSchema(many=True)
 class Item(Resource):
-    parser = reqparse.RequestParser()
-    parser.add_argument('price',
-        type=float,
-        required=True,
-        help="This field cannot be left blank"
-    )
-    parser.add_argument('store_id',
-        type=float,
-        required=True,
-        help="This field cannot be left blank"
-    )
-
-    def json(self):
-        return {'name': self.name,'price':self.price}
-
     @jwt_required #jwt required to access the item
     def get(self,name):
         item = ItemModel.find_by_name(name)
         if item:
-            return item.json()
+            return item_schema.dump(item),200
         return {'message':'item not found'},404
 
     #@jwt_required() #jwt required to access the item
     def post(self,name):
-        data = Item.parser.parse_args()
-        #print(data)
-        item = ItemModel(name,**data) #(name,**data)
+        item_json = request.get_json() #price,id
+        item_json["name"] = name
+
+        try:
+            item = item_schema.load(item_json)
+        except ValidationError as err:
+            return err.messages,400
 
         try:
             ItemModel.save_to_db(item)
         except:
             return {'message':'Error inserting the item'},500
 
-        return item.json(),201
+        return item_schema.dump(item),201
 
         if ItemModel.find_by_name(name):
             return {'message':'Item already exists'},400
@@ -55,23 +48,27 @@ class Item(Resource):
             item.delete_from_db
         return {'message':'item deleted'}
 
-    def put(self, name):
-        data = Item.parser.parse_args()
+    def put(self, name): #put and post 
+        item_json = request.get_json()
         item = ItemModel.find_by_name(name)
 
-        if item is None:
-            item = ItemModel(name, **data)
+        if item:
+            item.price = item_json['price']
         else:
-            item.price = data['price']
-        
+            item_json["name"] = name
+    
+            try:
+                item = item_schema.load(item_json)
+            except ValidationError as err:
+                return err.messages,400
         item.save_to_db()
-        return item.json()
+        return item_json.dump(item),200
 
 class ItemList(Resource):
     @jwt_optional
     def get(self):
         user_id = get_jwt_identity() #the id stored in jwt
-        items = [item.json() for item in ItemModel.find_all()]
+        items = [item_list_schema.dump(ItemModel.find_all())]
         if user_id:
             return {'items': items},200
         return {'items':[item['name'] for item in items],
